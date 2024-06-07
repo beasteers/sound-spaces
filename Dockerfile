@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # Install conda
-RUN curl -sL "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" > ~/"miniconda.sh" &&\
+RUN curl -vk -sL "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" > ~/"miniconda.sh" &&\
     chmod +x ~/miniconda.sh &&\
     ~/miniconda.sh -b -p /opt/conda &&\
     rm ~/miniconda.sh &&\
@@ -39,20 +39,31 @@ RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 RUN cmake --version
 
 # Conda environment
-RUN conda create -n soundspaces python=3.8 cmake=3.14.0
+RUN conda create -n soundspaces python=3.9 cmake=3.14.0
 
 # Setup habitat-sim
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
-RUN /bin/bash -c ". activate soundspaces; cd habitat-sim; pip install -r requirements.txt; python setup.py install --headless"
+RUN /bin/bash -c ". activate soundspaces; cd habitat-sim; pip install -r requirements.txt; python setup.py install --headless --audio"
 
 # Install challenge specific habitat-lab
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
 RUN /bin/bash -c ". activate soundspaces; cd habitat-lab; git checkout v0.1.6; pip install -e ."
 
-# Install challenge specific habitat-lab
-RUN pwd
-RUN git clone --branch master https://github.com/facebookresearch/sound-spaces.git
-RUN /bin/bash -c ". activate soundspaces; cd sound-spaces;pip install -e ."
+RUN apt-get update && apt-get install -y bison gawk && rm -rf /var/lib/apt/lists/*
+
+# install GLIBC
+RUN git clone git://sourceware.org/git/glibc.git && cd glibc && git checkout glibc-2.29 && mkdir build && cd build && ../configure --prefix "$(pwd)/install" && make -j `nproc` && make install -j `nproc` && mkdir $HOME/bin && cp $(pwd)/install/lib/libm.so.6 $HOME/bin/ && echo 'export LD_LIBRARY_PATH=$HOME/bin:$LD_LIBRARY_PATH' >> ~/.bashrc
+
+# Install soundspaces
+WORKDIR /sound-spaces
+COPY setup.py ./
+COPY soundspaces soundspaces/
+COPY ss_baselines ss_baselines/
+RUN pip install -e .
+COPY . .
+
+RUN conda init
+RUN echo 'conda activate soundspaces' >> ~/.bashrc
 
 # Silence habitat-sim logs
 ENV GLOG_minloglevel=2
