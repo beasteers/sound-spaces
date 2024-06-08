@@ -60,11 +60,23 @@ COPY setup.py ./
 COPY soundspaces soundspaces/
 COPY ss_baselines ss_baselines/
 RUN pip install -e .
-COPY . .
 
+# make sure conda activates by default
 RUN conda init
 RUN echo 'conda activate soundspaces' >> ~/.bashrc
+RUN /bin/bash -c ". activate soundspaces; conda install -y -c conda-forge nb_conda_kernels ipykernel"
+RUN /bin/bash -c ". activate soundspaces; python -m ipykernel install --user --name=soundspaces"
+RUN /bin/bash -c ". activate soundspaces; pip install jupyterlab"
+RUN /bin/bash -c ". activate soundspaces; pip install librosa[display] pyroomacoustics"
+
+RUN echo '#!/bin/bash -i\nexec "$@"' > /entrypoint.sh && chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
+# copy the rest of the repo
+COPY . .
 
 # Silence habitat-sim logs
 ENV GLOG_minloglevel=2
 ENV MAGNUM_LOG="quiet"
+ENV SHELL=/bin/bash
+ENV DISPLAY=:0
