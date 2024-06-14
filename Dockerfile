@@ -38,16 +38,19 @@ RUN sh /cmake-3.14.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
 RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 RUN cmake --version
 
+RUN curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash && apt-get install -y git-lfs && rm -rf /var/lib/apt/lists/*
+
 # Conda environment
 RUN conda create -n soundspaces python=3.9 cmake=3.14.0
+RUN /bin/bash -c ". activate soundspaces; conda install -y conda-forge::gcc_linux-64"
 
 # Setup habitat-sim
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
-RUN /bin/bash -c ". activate soundspaces; cd habitat-sim; pip install -r requirements.txt; python setup.py install --headless --audio"
+RUN /bin/bash -c ". activate soundspaces; cd habitat-sim; git checkout RLRAudioPropagationUpdate; pip install -r requirements.txt; python setup.py install --headless --audio"
 
-# Install challenge specific habitat-lab
+# Install challenge specific habitat-lab v0.1.6
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
-RUN /bin/bash -c ". activate soundspaces; cd habitat-lab; git checkout v0.1.6; pip install -e ."
+RUN /bin/bash -c ". activate soundspaces; cd habitat-lab; git checkout v0.2.2; pip install -e ."
 
 RUN apt-get update && apt-get install -y bison gawk && rm -rf /var/lib/apt/lists/*
 
@@ -60,6 +63,7 @@ COPY setup.py ./
 COPY soundspaces soundspaces/
 COPY ss_baselines ss_baselines/
 RUN pip install -e .
+RUN pip install trimesh
 
 # make sure conda activates by default
 RUN conda init
@@ -79,4 +83,5 @@ COPY . .
 ENV GLOG_minloglevel=2
 ENV MAGNUM_LOG="quiet"
 ENV SHELL=/bin/bash
-ENV DISPLAY=:0
+#ENV DISPLAY=:0
+ENV DISPLAY=host.docker.internal:0.0

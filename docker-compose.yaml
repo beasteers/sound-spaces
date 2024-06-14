@@ -1,0 +1,10 @@
+# docker run --rm -it --net=host -d -v $(pwd):/sound-spaces -v /datasets/soundspaces:/sound-spaces/data beasteers/soundspaces jupyter lab --allow-root --notebook-dir=/
+version: '3'
+services:
+  soundspaces:
+    image: beasteers/soundspaces
+    volumes:
+      - ./sound-spaces:/sound-spaces
+      - /datasets/soundspaces:/sound-spaces/data
+    command: jupyter lab --allow-root
+    network_mode: host
